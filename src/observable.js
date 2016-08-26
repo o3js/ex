@@ -1,15 +1,14 @@
-const s = require('./stream');
+// const s = require('./stream');
 
 class GreedyObservable {
 
-  constructor(initialValue, stream) {
+  constructor(initialValue, str) {
     const self = this;
-    s.assertStream(stream);
+    // s.assertStream(str);
 
     self._currentValue = initialValue;
-    self._source = stream;
-    s.each(
-      stream,
+    self._source = str;
+    str.subscribe(
       (item) => { self._currentValue = item; }
     );
   }
@@ -17,11 +16,19 @@ class GreedyObservable {
   subscribe(next, __, complete) {
     const self = this;
     __ = null;
-    return s.each(
-      s.changes(s.startWith(self._currentValue, self._source)),
-      next,
-      null,
-      complete);
+    // TODO: only push changes
+    next(self._currentValue);
+    return self._source.subscribe(next, null, complete);
+  }
+
+  bind(...args) {
+    const self = this;
+    self._source.bind(...args);
+  }
+
+  current(cb) {
+    const self = this;
+    cb(self._currentValue);
   }
 }
 

@@ -3,8 +3,10 @@
 {
   "extends": "airbnb",
   "rules": {
-    "prefer-template": "off",
+    "curly": "off",
+    "no-nested-ternary": "off",
     "no-param-reassign": "off",
+    "prefer-template": "off",
     "no-underscore-dangle": "off",
     "max-len": ["error", 80]
   }
