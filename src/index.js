@@ -236,22 +236,25 @@ const take = (str, count) => {
 
   return stream((next, error, complete) => {
     if (count === 0) complete();
-    let completed = false;
     let taken = 0;
-    const unsubscribe = each(
+    let unsubscribe;
+    unsubscribe = each(
       str,
       (val) => {
+        taken++;
+        if (taken <= count) {
+          next(val);
+        }
         if (taken >= count) {
+          complete();
+          complete = fp.noop;
           // If firing synchronously we won't have an unsub function yet...
-          if (!completed && unsubscribe) {
-            completed = true;
+          if (unsubscribe) {
             unsubscribe();
-            complete();
+            unsubscribe = fp.noop;
           }
           return;
         }
-        taken++;
-        next(val);
       },
       error,
       complete);
