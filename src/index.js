@@ -51,7 +51,6 @@ const makeSourceFn = (thing) => {
     return fromEmitter(thing, _.rest(arguments)[0]);
   }
   if (_.isFunction(thing.then)) {
-    console.log("FROM PROMISE");
     return fromPromise(thing);
   }
   if (isStream(thing)) {
