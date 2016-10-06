@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const fp = require('lodash/fp');
 const assert = require('sugar').assert;
 const LazyStream = require('./stream').LazyStream;
 const GreedyObservable = require('./observable').GreedyObservable;
@@ -132,6 +133,23 @@ const bind = (str, thing) => (
 
 const each = (str, n, e, c) => str.subscribe(n, e, c);
 
+const tap = (str, n, e, c) => {
+  n = n || fp.noop;
+  e = e || fp.noop;
+  c = c || fp.noop;
+  assert(_.isFunction(n));
+  assert(_.isFunction(e));
+  assert(_.isFunction(c));
+  return stream(
+    (next, error, complete) => {
+      each(
+        str,
+        (i) => { n(i); next(i); },
+        (err) => { e(err); error(err); },
+        () => { c(); complete(); });
+    });
+};
+
 const map = (str, mapper) => stream((next, error, complete) => {
   each(
     str,
@@ -141,6 +159,16 @@ const map = (str, mapper) => stream((next, error, complete) => {
     error,
     complete);
 });
+
+const collect = (str) => new Promise(
+  (resolve, reject) => {
+    const items = [];
+    each(
+      str,
+      (item) => { items.push(item); },
+      (err) => { reject(err); reject = _.noop; },
+      () => { resolve(items); });
+  });
 
 const adjoinStreams = (strs, tuple) => stream((next, error, complete) => {
   const completed = _.map(strs, () => false);
@@ -321,6 +349,43 @@ const flatten = (str) => {
   });
 };
 
+const log = (msg, str) => tap(
+  str,
+  (i) => console.log(msg + ':', i),
+  (e) => console.log(msg + ' error:', e),
+  () => console.log(msg + ' completed'));
+
+const after = (trigger, str) => flatten(
+  map(
+    take(trigger, 1),
+    () => str));
+
+const filter = (str, predicate) => {
+  assertStream(str);
+  return stream((next, error, complete) => {
+    each(
+      str,
+      (item) => {
+        if (fp.filter(predicate, [item]).length > 0) next(item);
+      },
+      error,
+      complete);
+  });
+};
+
+const reject = (str, predicate) => {
+  assertStream(str);
+  return stream((next, error, complete) => {
+    each(
+      str,
+      (item) => {
+        if (fp.reject(predicate, [item]).length > 0) next(item);
+      },
+      error,
+      complete);
+  });
+};
+
 const streamCast = (thing) => (
   (thing && thing.subscribe) ? thing : stream([thing]));
 
@@ -330,6 +395,7 @@ const o = (fn, ...args) => observable(null, s(fn, ...args));
 
 _.extend(s, {
   stream,
+  isStream,
   bind,
   each,
   map,
@@ -341,6 +407,12 @@ _.extend(s, {
   tail,
   merge,
   flatten,
+  after,
+  tap,
+  log,
+  collect,
+  filter,
+  reject,
 });
 _.extend(o, { observable });
 
